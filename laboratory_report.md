@@ -1,3 +1,4 @@
+
 # Hardware Lab Report: DC Motor Driver Circuit & PWM Onset Analysis
 
 ## 1. Task Summary
@@ -139,27 +140,29 @@ This section details the photographic and video evidence verifying circuit funct
 ### Part A: Example 7 Documentation (Button Hold-to-Run)
 
 #### 1. Circuit Setup Photograph
-* **File:** `picexample7.jpeg`
+* **File:** <img width="4128" height="1952" alt="picexample7" src="https://github.com/user-attachments/assets/8f4b8499-96fc-44dd-9a15-e6bb868f9f8e" />
 * **Description:** Photographic evidence of the complete physical circuit setup for Example 7. Shows the ESP32 expansion board, DRV8833 driver module, 3V DC motor connections, and pushbutton wired to GPIO 23.
 
 #### 2. Functional Demonstration Video
-* **File:** `videxample7.mp4`
+* **File:** https://github.com/user-attachments/assets/9e5e58bf-6f72-432c-8fdc-13d72cea75df
 * **Description:** Video demonstration verifying button-controlled run and coast operation. Pressing the button causes the motor to spin; releasing it allows the motor shaft to coast naturally to a stop.
+
 
 ---
 
 ### Part B: Optional Extension Documentation (Potentiometer PWM Control)
 
 #### 1. PWM Circuit Setup Photograph
-* **File:** `picpmw.jpeg`
+* **File:** <img width="4128" height="1952" alt="picpmw" src="https://github.com/user-attachments/assets/b285fccf-31cf-4d24-aff2-c10f9d1c2da6" />
+
 * **Description:** Photograph showing the extension circuit layout with a 10kΩ potentiometer connected to 3.3V, GND, and GPIO 34 (analog wiper input).
 
 #### 2. PWM Speed Control Video
-* **File:** `vidpmw1.mp4`
+* **File:** https://github.com/user-attachments/assets/9803fa3b-691f-4f43-8304-e9be7ab2fcb5
 * **Description:** Video recording demonstrating variable motor speed control as the potentiometer knob is swept from 0% to 100% duty cycle.
 
 #### 3. Rotational Onset & Serial Monitor Verification Video
-* **File:** `vidpmw2.mp4`
+* **File:** https://github.com/user-attachments/assets/7835828e-27bf-498d-a1e1-40833407649e
 * **Description:** Dual-view video capturing the motor shaft beginning rotation while simultaneously recording the live Serial Monitor feed. Demonstrates the precise point of static friction breakdown at **27.5% duty cycle** (`PWM = 70`).
 
 ---
