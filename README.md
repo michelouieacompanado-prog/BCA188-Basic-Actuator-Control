@@ -11,12 +11,7 @@ This repository contains the Arduino code, circuit schematics, datasheet referen
 ├── src/
 │   ├── example_7_hold_to_run.ino  # Example 7: Button hold-to-run control
 │   └── potentiometer_pwm.ino      # Optional Extension: Potentiometer PWM control
-└── media/
-    ├── picexample7.jpeg      # Photo of Example 7 circuit setup
-    ├── videxample7.mp4      # Demonstration video of button run/coast behavior
-    ├── picpmw.jpeg           # Photo of Potentiometer PWM circuit setup
-    ├── vidpmw1.mp4          # Demonstration video of PWM motor speed control
-    └── vidpmw2.mp4          # Demonstration video showing motor spinning alongside Serial Monitor
+
 ```
 
 ## Required Hardware
