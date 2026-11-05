@@ -13,10 +13,10 @@ This repository contains the Arduino code, circuit schematics, datasheet referen
 │   └── potentiometer_pwm.ino      # Optional Extension: Potentiometer PWM control
 └── media/
     ├── picexample7.jpeg      # Photo of Example 7 circuit setup
-    ├── videxample7.jpeg      # Demonstration video of button run/coast behavior
+    ├── videxample7.mp4      # Demonstration video of button run/coast behavior
     ├── picpmw.jpeg           # Photo of Potentiometer PWM circuit setup
-    ├── vidpmw1.jpeg          # Demonstration video of PWM motor speed control
-    └── vidpmw2.jpeg          # Demonstration video showing motor spinning alongside Serial Monitor
+    ├── vidpmw1.mp4          # Demonstration video of PWM motor speed control
+    └── vidpmw2.mp4          # Demonstration video showing motor spinning alongside Serial Monitor
 ```
 
 ## Required Hardware
