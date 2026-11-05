@@ -1,5 +1,6 @@
 
-# Hardware Lab Report: DC Motor Driver Circuit & PWM Onset Analysis
+#  Basic Actuator Control: DC Motor Driver Circuit & PWM Onset Analysis
+
 
 ## 1. Task Summary
 The objective of this lab is to construct a motor driver circuit using an ESP32 microcontroller, a DRV8833 dual H-bridge driver board, and a 3V DC toy motor. The project demonstrates both digital button-controlled hold-to-run behavior and potentiometer-driven PWM speed control to experimentally determine the minimum duty cycle required for the onset of rotation.
