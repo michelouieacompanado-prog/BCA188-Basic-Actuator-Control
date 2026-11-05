@@ -1,160 +1,130 @@
-# LABORATORY REPORT 6: BASIC ACTUATOR CONTROL
+# Hardware Lab Report: DC Motor Driver Circuit & PWM Onset Analysis
 
-**Course Code:** BCA188 — Internet of Things / Embedded Systems  
-**Activity Title:** Laboratory Activity 6: Basic Actuator Control  
-**Student Name:** Miche Louie B. Acompañado 
-**Degree Program:** BS Computer Applications (IoT Track)  
-**Institution:** Mindanao State University – Iligan Institute of Technology  
-**Date of Execution:** October 2, 2026  
+## 1. Task Summary
+The objective of this lab is to construct a motor driver circuit using an ESP32 microcontroller, a DRV8833 dual H-bridge driver board, and a 3V DC toy motor. The project demonstrates both digital button-controlled hold-to-run behavior and potentiometer-driven PWM speed control to experimentally determine the minimum duty cycle required for the onset of rotation.
 
 ---
 
-## I. OBJECTIVES
+## 2. Component Specifications & Datasheet References
 
-1. Construct and verify a DC motor driver circuit using an ESP32 microcontroller and a Texas Instruments DRV8833 dual H-bridge breakout board.
-2. Demonstrate level-controlled run and coast motor behavior using digital button logic.
-3. Evaluate the functional roles of control signals (`AIN1`, `AIN2`), driver wake-up logic (`nSLEEP`), motor power isolation (`VM`), and common ground reference.
-4. Measure and document the minimum Pulse Width Modulation (PWM) duty cycle required to overcome static mechanical friction (onset of rotation) on a 3V DC motor.
+### 3V DC Motor (130-Size Toy Motor)
+* **Rated Voltage:** $3.0\text{ V}$ to $5.0\text{ V DC}$
+* **Stall Current:** $\approx 0.8\text{ A}$ to $1.5\text{ A}$ (at $3\text{ V} - 5\text{ V}$ load)
+* **Datasheet:** [Adafruit 130-Size 3V DC Motor Reference Datasheet](https://www.adafruit.com/product/711)
 
----
-
-## II. HARDWARE SPECIFICATIONS & DATASHEETS
-
-### 1. DC Motor
-* **Nominal Rated Voltage:** 3.0V DC (Operating Range: 1.5V – 4.5V)
-* **Stall Current:** ~0.80 A @ 3.0V
-* **No-Load Current:** ~0.12 A
-* **Datasheet Reference:** [Adafruit 3V DC Motor Specifications (ID: 711)](https://www.adafruit.com/product/711)
-
-### 2. Motor Driver Breakout Board
-* **Model:** Texas Instruments DRV8833 Dual H-Bridge Motor Driver
-* **Motor Supply Voltage ($V_M$):** 2.7V to 10.8V
-* **Continuous Output Current:** 1.5A RMS per channel (2.0A Peak)
-* **Logic Compatibility:** 1.8V to 5.0V logic systems
-* **Protection Features:** Overcurrent Protection (OCP), Short-Circuit Protection, Thermal Shutdown (TSD), and Undervoltage Lockout (UVLO).
-* **Datasheet Reference:** [Texas Instruments DRV8833 Datasheet (SLRS096E)](https://www.ti.com/lit/ds/symlink/drv8833.pdf)
+### Dual H-Bridge Motor Driver Module
+* **Silicon IC Part Marking:** `DVR8833 54K CTKJ` (Texas Instruments DRV8833 Dual H-Bridge Motor Driver IC)
+* **Breakout Layout:** Red Dual H-Bridge Module (TB6612-compatible PCB footprint and pin labels)
+* **Operating Voltage Range ($\text{V}_{\text{M}}$):** $2.7\text{ V}$ to $10.8\text{ V}$
+* **Logic Voltage ($\text{V}_{\text{CC}}$):** $2.7\text{ V}$ to $5.5\text{ V}$
+* **Output Current:** $1.2\text{ A RMS}$ continuous per channel ($2.0\text{ A}$ peak per channel)
+* **Datasheet:** [Texas Instruments DRV8833 Datasheet](https://www.ti.com/lit/ds/symlink/drv8833.pdf)
 
 ---
 
-## III. CONTROL SIGNALS & SYSTEM PINOUT MAPPING
+## 3. Circuit Wiring & Hardware Connections
 
-### 1. Driver Signal Roles
-* **`AIN1` & `AIN2` (H-Bridge Control Inputs):** Logic-level switching pins that determine the direction and state of the internal H-bridge MOSFETs. Setting `AIN1 = HIGH` and `AIN2 = LOW` completes the forward power path. Setting `AIN1 = LOW` and `AIN2 = LOW` places the driver outputs in high-impedance Coast mode.
-* **`nSLEEP` (Active-LOW Wake/Disable):** Disables internal charge pumps and logic circuits when pulled LOW ($V < 0.5\text{V}$), dropping current draw below $1.6\,\mu\text{A}$. Pulling `nSLEEP` HIGH ($V > 2.0\text{V}$) wakes up the IC. A compulsory 2 ms delay is required post-wake before issuing drive commands.
-* **`VM` (Motor Power Rail):** Dedicated external power rail for motor loads. Isolates high-power inductive switching currents from the low-power 3.3V logic rail, preventing brownouts and voltage spike disruptions on the microcontroller.
-* **`Common Ground` (Shared 0V Reference):** Interconnects the logic ground of the ESP32 with the power ground of the motor power supply. Establishing a uniform 0V baseline is required for digital signal logic thresholds to register accurately.
-
-### 2. Microcontroller Pin Mapping Table
-
-| Source Signal | ESP32 GPIO Pin | Configured Mode | Function Description |
-| :--- | :--- | :--- | :--- |
-| **Push Button** | `GPIO 23` | `INPUT_PULLUP` | Reads `LOW` when pressed, `HIGH` when unpressed |
-| **DRV8833 AIN1** | `GPIO 21` | `OUTPUT` | Direction / PWM command signal pin |
-| **DRV8833 AIN2** | `GPIO 22` | `OUTPUT` | Direction reference pin (Held `LOW`) |
-| **DRV8833 nSLEEP** | `GPIO 27` | `OUTPUT` | Active-LOW driver wake-up pin |
-| **Potentiometer** | `GPIO 34` | `INPUT` (ADC1_CH6) | 12-bit analog input for PWM duty scaling |
-
----
-
-## IV. DRV8833 LOGIC TRUTH TABLE
-
-| `nSLEEP` | `AIN1` | `AIN2` | H-Bridge State | Resulting Motor Behavior |
-| :---: | :---: | :---: | :--- | :--- |
-| **LOW** | X | X | High-Z Outputs | **Sleep / Fault Mode:** Ultra-low power state |
-| **HIGH** | HIGH | LOW | $AOUT1 = V_M, AOUT2 = GND$ | **Forward Drive:** Motors turns forward |
-| **HIGH** | LOW | HIGH | $AOUT1 = GND, AOUT2 = V_M$ | **Reverse Drive:** Motor turns in reverse |
-| **HIGH** | LOW | LOW | High-Z Outputs (Fast Decay) | **Coast Mode:** Shaft spins down freely |
-| **HIGH** | HIGH | HIGH | Low-Side MOSFETs Active | **Brake Mode:** Terminals shorted; locks shaft |
+### Wiring Summary Table
+| DRV8833 Module Pin | Target Connection | Functional Description |
+| :--- | :--- | :--- |
+| **`VM`** | **ESP32 Expansion Board 5V Output** | Dedicated high-current motor power rail |
+| **`GND`** | **ESP32 GND Pin** | Common zero-voltage reference for signals and power |
+| **`STBY` / `nSLEEP`** | **ESP32 GPIO 27** | Active-HIGH driver wake-up / sleep control line |
+| **`AIN1`** | **ESP32 GPIO 21** | Logic input 1 for Channel A H-Bridge (PWM line) |
+| **`AIN2`** | **ESP32 GPIO 22** | Logic input 2 for Channel A H-Bridge (Grounded for forward drive) |
+| **`AO1`** | **Motor Terminal 1** | Channel A output lead 1 |
+| **`AO2`** | **Motor Terminal 2** | Channel A output lead 2 |
+| **`Pushbutton`** | **ESP32 GPIO 23 to GND** | Digital control switch using ESP32 internal pull-up |
+| **`Potentiometer Pin 1`**| **ESP32 3.3V** | Analog reference high |
+| **`Potentiometer Pin 2`**| **ESP32 GND** | Analog reference ground |
+| **`Potentiometer Wiper`** | **ESP32 GPIO 34** | Analog voltage input line for PWM scaling |
 
 ---
 
-## V. SOURCE CODE IMPLEMENTATIONS
+## 4. Explanation of Pin Functions & Logic States
 
-### 1. Main Task: Level-Controlled Drive (`Example7.ino`)
+* **`AIN1` & `AIN2`:** Directional logic control inputs for H-Bridge Output Channel A.
+  * `AIN1 = HIGH, AIN2 = LOW`: Forward motion drive.
+  * `AIN1 = LOW, AIN2 = HIGH`: Reverse motion drive.
+  * `AIN1 = LOW, AIN2 = LOW`: **Coast Mode** (the output transistors enter a high-impedance state, letting the motor glide naturally to a stop without electrical braking).
+* **`STBY` / `nSLEEP`:** Active-HIGH sleep enable line. Driving this pin **HIGH** powers internal charge pumps and logic circuitry; driving it **LOW** forces low-power sleep mode.
+* **`VM`:** Motor power supply rail. Drives high current directly to the H-bridge power MOSFETs. Powering `VM` from the ESP32 shield's stable 5V rail prevents brownouts caused by starting current spikes.
+* **`Common Ground (GND)`:** Shares a common 0V reference across the microcontroller, motor driver, and external power sources, preventing floating digital logic signals.
 
+---
+
+## 5. Source Code
+
+### Part A: Example 7 — Hold Button to Run Motor
 ```cpp
-/*
-  BCA188 - Laboratory Activity 6: Basic Actuator Control
-  Task 1: Level-Controlled Run/Coast Motor Drive
-*/
-
 #include <Arduino.h>
 
 const uint8_t BUTTON_PIN = 23;
 const uint8_t MOTOR_IN1 = 21;
 const uint8_t MOTOR_IN2 = 22;
-const uint8_t DRIVER_SLEEP_PIN = 27;
+const uint8_t DRIVER_SLEEP_PIN = 27; // Connected to STBY / nSLEEP pin
 
 void setup() {
   pinMode(DRIVER_SLEEP_PIN, OUTPUT);
-  digitalWrite(DRIVER_SLEEP_PIN, LOW); // Hold driver in low-power sleep
-  
+  digitalWrite(DRIVER_SLEEP_PIN, LOW); // Hold driver in sleep mode initially
+
   pinMode(MOTOR_IN1, OUTPUT);
   pinMode(MOTOR_IN2, OUTPUT);
   digitalWrite(MOTOR_IN1, LOW);
   digitalWrite(MOTOR_IN2, LOW);
 
-  pinMode(BUTTON_PIN, INPUT_PULLUP);  // Active-LOW button setup
+  pinMode(BUTTON_PIN, INPUT_PULLUP);
 
-  digitalWrite(DRIVER_SLEEP_PIN, HIGH); // Wake up DRV8833
-  delay(2);                            // Required wake-up interval
+  digitalWrite(DRIVER_SLEEP_PIN, HIGH); // Wake up the driver module
+  delay(2); // One-time driver wake-up interval
 }
 
 void loop() {
   const bool buttonPressed = (digitalRead(BUTTON_PIN) == LOW);
   digitalWrite(MOTOR_IN2, LOW);
-  digitalWrite(MOTOR_IN1, buttonPressed ? HIGH : LOW);
+  digitalWrite(MOTOR_IN1, buttonPressed ? HIGH : LOW); // HIGH runs motor, LOW coasts motor
 }
 ```
 
----
-
-### 2. Optional Exercise: Potentiometer PWM Control (`PotentiometerPWM.ino`)
-
+### Part B: Optional Extension — Potentiometer PWM & Onset of Rotation
 ```cpp
-/*
-  BCA188 - Laboratory Activity 6: Basic Actuator Control
-  Task 2: Potentiometer PWM Speed Control & Onset Duty Cycle Measurement
-*/
-
 #include <Arduino.h>
 
-const uint8_t MOTOR_IN1 = 21;         // PWM drive signal
-const uint8_t MOTOR_IN2 = 22;         // Held LOW
-const uint8_t DRIVER_SLEEP_PIN = 27;  // Active-LOW driver wake pin
-const uint8_t POT_PIN = 34;           // Analog input from Potentiometer
+const uint8_t POT_PIN = 34;           // Analog input pin connected to potentiometer wiper
+const uint8_t MOTOR_IN1 = 21;         // PWM control pin
+const uint8_t MOTOR_IN2 = 22;         // Direction control pin
+const uint8_t DRIVER_SLEEP_PIN = 27;  // Connected to STBY / nSLEEP pin
 
 void setup() {
   Serial.begin(115200);
 
   pinMode(DRIVER_SLEEP_PIN, OUTPUT);
+  digitalWrite(DRIVER_SLEEP_PIN, HIGH); // Driver active
+
   pinMode(MOTOR_IN1, OUTPUT);
   pinMode(MOTOR_IN2, OUTPUT);
-
-  digitalWrite(DRIVER_SLEEP_PIN, LOW);
-  digitalWrite(MOTOR_IN2, LOW);
-
-  digitalWrite(DRIVER_SLEEP_PIN, HIGH);
-  delay(2);
-  
-  Serial.println("--- DRV8833 Potentiometer PWM Test Initialized ---");
+  digitalWrite(MOTOR_IN2, LOW); // Fixed forward direction
 }
 
 void loop() {
-  uint16_t potRaw = analogRead(POT_PIN);              // Read 12-bit ADC (0 - 4095)
-  uint8_t pwmValue = map(potRaw, 0, 4095, 0, 255);    // Map to 8-bit PWM (0 - 255)
-
-  analogWrite(MOTOR_IN1, pwmValue);                   // Output PWM to AIN1
-
-  float dutyPercentage = (pwmValue / 255.0) * 100.0;
+  int potValue = analogRead(POT_PIN); // ADC reading (0–4095 on ESP32)
   
-  Serial.print("ADC Raw: ");
-  Serial.print(potRaw);
-  Serial.print(" | PWM Duty: ");
+  // Map ADC reading to 8-bit PWM duty cycle range (0–255)
+  uint8_t pwmValue = map(potValue, 0, 4095, 0, 255);
+  
+  // Output PWM to AIN1 while keeping AIN2 LOW
+  analogWrite(MOTOR_IN1, pwmValue);
+
+  // Compute duty cycle percentage
+  float dutyCyclePct = (pwmValue / 255.0) * 100.0;
+
+  Serial.print("Raw ADC: ");
+  Serial.print(potValue);
+  Serial.print(" | PWM (0-255): ");
   Serial.print(pwmValue);
-  Serial.print(" / 255 (");
-  Serial.print(dutyPercentage, 1);
-  Serial.println("%)");
+  Serial.print(" | Duty Cycle: ");
+  Serial.print(dutyCyclePct, 1);
+  Serial.println("%");
 
   delay(100);
 }
@@ -162,42 +132,45 @@ void loop() {
 
 ---
 
-## VI. EXPERIMENTAL RESULTS & ANALYSIS
+## 6. Circuit Documentation & Verification Media
 
-### 1. Verification of Run and Coast Behavior
-* **Button Held (`GPIO 23 = LOW`):** `MOTOR_IN1` transitions to `HIGH`, applying full $V_M$ across output channel `AOUT1` relative to `AOUT2`. Current flows through the motor winding, resulting in steady rotation.
-* **Button Released (`GPIO 23 = HIGH`):** `MOTOR_IN1` drops to `LOW`. With both `AIN1` and `AIN2` at `LOW`, the DRV8833 enters **Coast Mode** (Fast Decay). The driver outputs go high-impedance, letting rotor momentum dissipate gradually over ~0.5s due to mechanical friction, rather than abruptly locking.
+This section details the photographic and video evidence verifying circuit functionality, wiring integrity, and experimental PWM metrics.
 
-### 2. Onset of Rotation Measurement
-Due to static mechanical friction ($T_{stiction}$) in the brushes and motor bearings, applying low duty cycles does not immediately yield rotation. The onset threshold was empirically recorded via the Serial Monitor at the exact point initial movement occurred:
+### Part A: Example 7 Documentation (Button Hold-to-Run)
 
-| Measured Parameter | Recorded Experimental Value |
-| :--- | :--- |
-| **Raw ADC Input (GPIO 34)** | `1044` / 4095 |
-| **8-bit PWM Register Value** | `65` / 255 |
-| **Onset Duty Cycle Percentage** | **`25.5%`** |
-| **Effective Motor Voltage ($V_{eff}$)** | $V_{eff} = 3.0\text{V} \times 0.255 = \mathbf{0.765\text{V}}$ |
+#### 1. Circuit Setup Photograph
+* **File:** `picexample7.jpeg`
+* **Description:** Photographic evidence of the complete physical circuit setup for Example 7. Shows the ESP32 expansion board, DRV8833 driver module, 3V DC motor connections, and pushbutton wired to GPIO 23.
 
-#### Analytical Explanation:
-* **Below 25.5% Duty Cycle (PWM < 65):** Average terminal voltage ($V_{eff} < 0.765\text{V}$) creates electromagnetic torque insufficient to overcome static friction:
-  $$T_{electro} = k_t \cdot I_{avg} < T_{stiction}$$
-  An audible coil hum was noted between 10% and 24% duty cycle without shaft motion.
-* **At $\mathbf{\ge 25.5\%}$ Duty Cycle (PWM $\ge$ 65):** Electromagnetic torque satisfies $T_{electro} \ge T_{stiction}$, establishing continuous rotation.
+#### 2. Functional Demonstration Video
+* **File:** `videxample7.mp4`
+* **Description:** Video demonstration verifying button-controlled run and coast operation. Pressing the button causes the motor to spin; releasing it allows the motor shaft to coast naturally to a stop.
 
 ---
 
-## VII. TECHNICAL DISCUSSION
+### Part B: Optional Extension Documentation (Potentiometer PWM Control)
 
-1. **Why is a Common Ground mandatory between the ESP32 and DRV8833?**  
-   Without a common ground, signal lines (`AIN1`, `AIN2`, `nSLEEP`) lack a shared 0V reference. Floating reference levels cause unpredictable logic state evaluation, false switching, or complete driver failure.
-2. **Why separate $V_M$ from the 3.3V logic power rail?**  
-   DC motors induce inductive voltage spikes (back-EMF) and high current surges during operation. Isolating $V_M$ on a dedicated power supply prevents microcontroller power drops (brownouts) and protects GPIO pins from voltage spikes.
-3. **What is the difference between Coast Mode and Active Brake Mode?**  
-   * **Coast Mode (`AIN1=0, AIN2=0`):** Output transistors go high-impedance, letting the shaft spin down freely under inertia.  
-   * **Brake Mode (`AIN1=1, AIN2=1`):** Short-circuits the motor terminals through the low-side MOSFETs, inducing opposing electromagnetic force that rapidly decelerates the rotor.
+#### 1. PWM Circuit Setup Photograph
+* **File:** `picpmw.jpeg`
+* **Description:** Photograph showing the extension circuit layout with a 10kΩ potentiometer connected to 3.3V, GND, and GPIO 34 (analog wiper input).
+
+#### 2. PWM Speed Control Video
+* **File:** `vidpmw1.mp4`
+* **Description:** Video recording demonstrating variable motor speed control as the potentiometer knob is swept from 0% to 100% duty cycle.
+
+#### 3. Rotational Onset & Serial Monitor Verification Video
+* **File:** `vidpmw2.mp4`
+* **Description:** Dual-view video capturing the motor shaft beginning rotation while simultaneously recording the live Serial Monitor feed. Demonstrates the precise point of static friction breakdown at **27.5% duty cycle** (`PWM = 70`).
 
 ---
 
-## VIII. CONCLUSION
+## 7. Experimental Results & Observed Behavior
 
-Laboratory Activity 6 successfully demonstrated basic actuator control using an ESP32 microcontroller and the DRV8833 H-Bridge breakout IC. The level-control experiment validated run and coast switching modes. Extension to potentiometer-based PWM speed control highlighted the non-linear relationship between duty cycle and mechanical shaft rotation, establishing the motor's onset of rotation threshold at a minimum duty cycle of **25.5%** ($V_{eff} \approx 0.765\text{V}$).
+1. **Button Run / Coast Verification:**
+   * **Button Pressed:** GPIO 23 triggers `LOW`. `AIN1` transitions to `HIGH` while `AIN2` stays `LOW`, energizing the H-bridge and driving the motor forward.
+   * **Button Released:** GPIO 23 turns `HIGH`. `AIN1` transitions to `LOW`. With both input lines `LOW`, the motor enters **Coast Mode** and naturally glides to a stop.
+2. **Measured Onset of Rotation (Experimental Output):**
+   * **Supply Voltage ($\text{V}_{\text{M}}$):** $5.0\text{ V DC}$ (from ESP32 Expansion Shield)
+   * **PWM Command Value at Onset:** `70` (out of 255)
+   * **Measured Onset Duty Cycle:** **`27.5%`**
+   * **Observation:** At duty cycles below 27.5%, current through the H-bridge produces an audible humming noise, but the magnetic torque is insufficient to overcome the motor's internal static friction and brush cogging. At exactly 27.5% duty cycle, the motor overcomes static friction and begins to rotate very slowly. The onset threshold is a measured result dependent on physical friction and mechanical load, rather than a fixed value.
