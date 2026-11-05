@@ -1,46 +1,49 @@
-# Laboratory Activity 6: Basic Actuator Control
+# ESP32 DRV8833 DC Motor Controller Project
 
-## 1. Hardware Specifications
+This repository contains the Arduino code, circuit schematics, datasheet references, and submission documentation for driving a 3V DC motor using an **ESP32 microcontroller** and a **DRV8833 Dual H-Bridge Motor Driver Module**.
 
-| Component | Rated Voltage / Limits | Stall Current / Peak Limit | Datasheet Link |
-| :--- | :--- | :--- | :--- |
-| **DC Motor** | `[Insert Volts e.g., 3V - 6V]` | `[Insert Amps e.g., 1.5A]` | `[Insert URL]` |
-| **Driver Breakout** | `[Insert Driver Volts e.g., 2.7V - 10.8V]` | `[Insert Driver Amps e.g., 1.5A RMS]`| `[Insert URL]` |
+## Project Structure
 
-## 2. Pin Explanations
+```
+.
+├── lab_report.md             # Complete lab report and submission documentation
+├── README.md                 # Project repository overview and setup guide
+├── src/
+│   ├── example_7_hold_to_run.ino  # Example 7: Button hold-to-run control
+│   └── potentiometer_pwm.ino      # Optional Extension: Potentiometer PWM control
+└── media/
+    ├── picexample7.jpeg      # Photo of Example 7 circuit setup
+    ├── videxample7.jpeg      # Demonstration video of button run/coast behavior
+    ├── picpmw.jpeg           # Photo of Potentiometer PWM circuit setup
+    ├── vidpmw1.jpeg          # Demonstration video of PWM motor speed control
+    └── vidpmw2.jpeg          # Demonstration video showing motor spinning alongside Serial Monitor
+```
 
-* **AIN1 & AIN2:** Logic pins that control the H-bridge channel state. The high/low combination across both pins determines the motor's direction (Forward, Reverse) or idle state (Coast, Brake).
-* **nSLEEP:** An active-low pin. Pulling it HIGH wakes up the driver; pulling it LOW puts it into a low-power sleep state and clears faults.
-* **VM (Motor Voltage):** The external power supply input dedicated strictly to driving the motor load, kept isolated from logic voltage.
-* **Common Ground:** Connects the logic ground and external motor power ground to ensure a shared 0V reference for stable H-bridge switching.
+## Required Hardware
 
-## 3. Example 7: Button-Controlled Run/Coast
+1. **ESP32 Microcontroller Board** (with expansion shield)
+2. **DRV8833 Dual H-Bridge Driver Board** (Red PCB labeled `DVR8833 54K CTKJ`)
+3. **130-Size 3V DC Toy Motor**
+4. **10kΩ Potentiometer** (for PWM extension)
+5. **Pushbutton**
+6. **Jumper Wires**
 
-**Observed Behavior:** 
-`[Record your observation here. e.g., The motor begins rotating immediately while the button on GPIO 23 is held. Upon releasing the button, AIN1 drops LOW matching AIN2, causing the motor to coast smoothly to a stop rather than braking aggressively.]`
+## Pin Connection Guide
 
-### Base Source Code
-```cpp
-#include <Arduino.h>
-const uint8_t BUTTON_PIN = 23;
-const uint8_t MOTOR_IN1 = 21;
-const uint8_t MOTOR_IN2 = 22;
-const uint8_t DRIVER_SLEEP_PIN = 27;
+| Component Pin | ESP32 Connection | Description | 
+| :--- | :--- | :--- | 
+| **`VM`** | **5V Rail** | High-current motor power supply rail | 
+| **`GND`** | **GND** | Shared common ground reference | 
+| **`STBY` / `nSLEEP`** | **GPIO 27** | Active-HIGH sleep wake-up line | 
+| **`AIN1`** | **GPIO 21** | PWM / Direction signal input | 
+| **`AIN2`** | **GPIO 22** | Direction control (tied LOW for forward) | 
+| **`AO1` / `AO2`** | **Motor Terminals** | H-Bridge Output A1 and A2 | 
+| **`Pushbutton`** | **GPIO 23** | Digital input switch (Internal pull-up) | 
+| **`Potentiometer Wiper`** | **GPIO 34** | Analog ADC input | 
 
-void setup() {
-  pinMode(DRIVER_SLEEP_PIN, OUTPUT);
-  digitalWrite(DRIVER_SLEEP_PIN, LOW);
-  pinMode(MOTOR_IN1, OUTPUT);
-  pinMode(MOTOR_IN2, OUTPUT);
-  digitalWrite(MOTOR_IN1, LOW);
-  digitalWrite(MOTOR_IN2, LOW);
-  pinMode(BUTTON_PIN, INPUT_PULLUP);
-  digitalWrite(DRIVER_SLEEP_PIN, HIGH);
-  delay(2); // One-time driver wake-up interval.
-}
+## Setup & Execution
 
-void loop() {
-  const bool buttonPressed = (digitalRead(BUTTON_PIN) == LOW);
-  digitalWrite(MOTOR_IN2, LOW);
-  digitalWrite(MOTOR_IN1, buttonPressed ? HIGH : LOW);
-}
+1. Connect the ESP32 to your computer via USB.
+2. Open the desired sketch in **Arduino IDE**.
+3. Select board **ESP32 Dev Module** and set baud rate to **`115200`**.
+4. Upload the sketch and monitor output in the Serial Monitor.
