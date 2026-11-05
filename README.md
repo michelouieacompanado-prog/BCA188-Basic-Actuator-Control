@@ -1,4 +1,4 @@
-# ESP32 DRV8833 DC Motor Controller Project
+# Basic Actuator Control
 
 This repository contains the Arduino code, circuit schematics, datasheet references, and submission documentation for driving a 3V DC motor using an **ESP32 microcontroller** and a **DRV8833 Dual H-Bridge Motor Driver Module**.
 
